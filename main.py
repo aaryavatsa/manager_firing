@@ -22,7 +22,6 @@ def calculate_expected_value(sigma: float, t_h: int, ror: float, p_naught: float
     fee_payment = calculate_fees(sigma, t_h, ror, p_naught, p_tau, fee)
 
     expected_value = nav - fee_payment
-    # print(f'Expected value (approach 1): {expected_value}')
     return expected_value
 
 
@@ -70,22 +69,27 @@ def numerical_simulation(num_simulations: int, sigma: float, delta_t: float,
 
 if __name__ == '__main__':
     sigma = .400
-    t_h = 5
+    t_h = 1
     r = 0.05
     p_naught = 100
     fee = 0.20
 
-    delta_t = 0.25
-    p_tau = 180
+    p_tau1 = 120
+    p_tau2 = 180
     ror_primes = np.linspace(start=r, stop=0.10, num=20)  # a range of r'
 
     alternative_values = [calculate_expected_value(sigma, t_h, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    alt_sim_values = [numerical_simulation(10000, sigma, delta_t, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    current_manager_value = calculate_expected_value(sigma, t_h, r, p_naught, p_tau, fee)
+    cm1 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau1, fee)
+    cm2 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau2, fee)
+#    print(cm2-cm1)
+    current_manager_values1 = [cm1 for ror in ror_primes]
+    current_manager_values2 = [cm2 for ror in ror_primes]
 
-    plt.plot(ror_primes, alternative_values, label='alternative manager, approach 1')
-    plt.plot(ror_primes, alt_sim_values, label='alternative manager, approach 2')
-    plt.axhline(current_manager_value, color='r', linestyle='-', label='current manager expected value')
+    plt.title(r'Comparison for $T_H=%i$' %t_h + ', $\sigma=%1.1f$' %sigma)
+    plt.plot(ror_primes, alternative_values, label='alternative manager')
+    plt.plot(ror_primes, current_manager_values1, color ='r',label=r'current manager, $P_\tau=120$')
+    plt.plot(ror_primes, current_manager_values2, color ='g',label=r'current manager, $P_\tau=180$')
+#    plt.axhline(current_manager_value, color='r', linestyle='-', label='current manager expected value')
     plt.xlabel(r'$r^\prime$')
     plt.ylabel('Expected value')
     plt.legend()
