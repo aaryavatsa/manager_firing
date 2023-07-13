@@ -20,56 +20,89 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 
-def calculate_expected_value(sigma: float, t_h: int, ror: float, p_naught: float, p_tau: float, fee: float) -> float:
-    """ Calculate expected value of holdings at time t = t_h. Parameters defined in documentation.
+def calculate_expected_value(vol: float, t_h: int, ror: float, p_naught: float, p_tau: float, fee: float) -> float:
+    """ Assuming that the largest value of NAV occurs at the final time step t_h, this function takes the NAV,
+    that grows at rate 'ror' with volatility 'vol', and returns the expected value of our holdings at time t_h.
+
+    :param vol: volatility
+    :param t_h: time horizon
+    :param ror: rate of return
+    :param p_naught: value of the NAV at inception
+    :param p_tau: value of the high water NAV (at time t_h)
+    :param fee: the fee payment ratio
+    :return: the expected value of our holdings
     """
     nav = p_naught * np.exp(ror * t_h)
-    fee_payment = calculate_fees(sigma, t_h, ror, p_naught, p_tau, fee)
+    fee_payment = calculate_fees(vol, t_h, ror, p_naught, p_tau, fee)
 
+    # In general, the expectation value of our holdings at time t = t_h consists of the NAV of the asset
+    # less the fee payments.
     expected_value = nav - fee_payment
     return expected_value
 
 
-def calculate_fees(sigma: float, t_h: int, ror: float, p_naught: float, p_tau: float, fee: float) -> float:
+def calculate_fees(vol: float, t_h: int, ror: float, p_naught: float, p_tau: float, fee: float) -> float:
+    """ By assessing the performance at time t = t_h and assuming that the largest value of NAV occurs at t_h,
+    this function returns the expected fee payment of the option.
+
+    :param vol: volatility
+    :param t_h: time horizon
+    :param ror: rate of return
+    :param p_naught: value of the NAV at inception
+    :param p_tau: value of the high water NAV (at time t_h)
+    :param fee: the fee payment ratio
+    :return: the expected fee payment
+    """
     N = norm.cdf  # define a normal distribution
 
-    d_pos_numerator = np.log(p_naught / p_tau) + t_h * (ror + sigma ** 2 / 2)
-    d_pos = d_pos_numerator / (sigma * np.sqrt(t_h))
+    # Formula (5) from Section 4.1
+    d_pos_numerator = np.log(p_naught / p_tau) + t_h * (ror + vol ** 2 / 2)
+    d_pos = d_pos_numerator / (vol * np.sqrt(t_h))
 
-    d_neg_numerator = np.log(p_naught / p_tau) + t_h * (ror - sigma ** 2 / 2)
-    d_neg = d_neg_numerator / (sigma * np.sqrt(t_h))
+    d_neg_numerator = np.log(p_naught / p_tau) + t_h * (ror - vol ** 2 / 2)
+    d_neg = d_neg_numerator / (vol * np.sqrt(t_h))
 
     fee_payment = fee * (N(d_pos) * p_naught * np.exp(ror * t_h) - N(d_neg) * p_tau)
     return max(fee_payment, 0.0)
 
 
-def numerical_simulation(num_simulations: int, sigma: float, delta_t: float,
-                         ror: float, p_naught: float, fee: float, t_h: float) -> tuple[float, float]:
+def simulate_expected_value(num_simulations: int, vol: float, t_h: float, delta_t: float, ror: float, p_naught: float,
+                            fee: float) -> float:
+    """ By relaxing the assumption that the largest NAV will be observed at final time step t_h, this function uses
+    a Monte Carlo method to calculate and return the expected value of our holdings.
+
+    :param num_simulations: number of simulations to run
+    :param vol: volatility
+    :param t_h: time horizon
+    :param delta_t: 'crystallization period', or time (in years) between observations of the NAV used
+        for purposes of establishing the fee
+    :param ror: rate of return
+    :param p_naught: NAV at conception
+    :param fee: the fee payment ratio
+    :return: the simulated expected value of our holdings.
+    """
     fees = []
-    terminal_values = []
+    terminal_nav_values = []
     num_crystallization_periods = int(t_h / delta_t)
 
     for _ in range(num_simulations):  # number of paths
         curr_high_watermark = p_naught
         curr_p = p_naught
-        for _ in range(num_crystallization_periods):  # iterations for one path
+        for _ in range(num_crystallization_periods):  # timeseries for one path
             normal_rv = np.random.normal()
-            exponential_term = delta_t * (ror - sigma ** 2 / 2) + (normal_rv * sigma * np.sqrt(delta_t))
-            p_i = curr_p * np.exp(exponential_term)
+            exponential_term = delta_t * (ror - vol ** 2 / 2) + (normal_rv * vol * np.sqrt(delta_t))
+            p_i = curr_p * np.exp(exponential_term)  # NAV at time i in timeseries
             if p_i > curr_high_watermark:
                 curr_high_watermark = p_i
             curr_p = p_i
 
         path_fee = fee * max(curr_high_watermark - p_naught, 0.0)
         fees.append(path_fee)
-        terminal_values.append(curr_p)
+        terminal_nav_values.append(curr_p)
 
-    expected_values = [terminal_values[i] - fees[i] for i in range(num_simulations)]
+    expected_values = [terminal_nav_values[i] - fees[i] for i in range(num_simulations)]
     avg_expected_value = np.average(expected_values)
-    std_error = int(np.std(expected_values))
-
-    # print(f'avg value: {avg_expected_value}, std_err: {std_error}')
-    return avg_expected_value, std_error
+    return avg_expected_value
 
 
 if __name__ == '__main__':
@@ -87,8 +120,8 @@ if __name__ == '__main__':
     ror_primes = np.linspace(start=r, stop=0.10, num=20)  # a range of r'
 
     alt_values = [calculate_expected_value(sigma, t_h, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    alt_sim_1 = [numerical_simulation(num_simulations, sigma, delta_t1, ror, p_naught, fee, t_h) for ror in ror_primes]
-    alt_sim_2 = [numerical_simulation(num_simulations, sigma, delta_t2, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_1 = [simulate_expected_value(num_simulations, sigma, t_h, delta_t1, ror, p_naught, fee) for ror in ror_primes]
+    alt_sim_2 = [simulate_expected_value(num_simulations, sigma, t_h, delta_t2, ror, p_naught, fee) for ror in ror_primes]
 
     alt_sim_values1 = [i[0] for i in alt_sim_1]
     alt_sim_values2 = [i[0] for i in alt_sim_2]
