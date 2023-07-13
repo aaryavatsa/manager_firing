@@ -61,7 +61,7 @@ def numerical_simulation(num_simulations: int, sigma: float, delta_t: float,
 
     expected_values = [terminal_values[i] - fees[i] for i in range(num_simulations)]
     avg_expected_value = np.average(expected_values)
-    std_error = np.std(expected_values, ddof=1) / np.sqrt(num_simulations)
+    std_error = int(np.std(expected_values))
 
     # print(f'avg value: {avg_expected_value}, std_err: {std_error}')
     return avg_expected_value, std_error
@@ -69,7 +69,7 @@ def numerical_simulation(num_simulations: int, sigma: float, delta_t: float,
 
 if __name__ == '__main__':
     sigma = .200
-    t_h = 5
+    t_h = 1
     r = 0.05
     p_naught = 100
     fee = .2
@@ -78,20 +78,17 @@ if __name__ == '__main__':
     p_tau2 = 180
     delta_t1 = .25
     delta_t2 = 1.0
-    num_simulations = 100000
+    num_simulations = 1000
     ror_primes = np.linspace(start=r, stop=0.10, num=20)  # a range of r'
 
     alt_values = [calculate_expected_value(sigma, t_h, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    alt_sim_values1 = [numerical_simulation(num_simulations, sigma, delta_t1, ror, p_naught, fee, t_h) for ror in ror_primes]
-    alt_sim_values2 = [numerical_simulation(num_simulations, sigma, delta_t2, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_1 = [numerical_simulation(num_simulations, sigma, delta_t1, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_2 = [numerical_simulation(num_simulations, sigma, delta_t2, ror, p_naught, fee, t_h) for ror in ror_primes]
 
-    sim_values = []
-    sim_std_err = []
-    for i in range(len(ror_primes)):
-        simulation = numerical_simulation(100000, sigma, delta_t, ror_primes[i], p_naught, fee, t_h)
-        sim_values.append(simulation[0])
-        sim_std_err.append(simulation[1])
-        print(f'simulation {i + 1}/{len(ror_primes)} complete.')
+    alt_sim_values1 = [i[0] for i in alt_sim_1]
+    alt_sim_values2 = [i[0] for i in alt_sim_2]
+    sim_std_err_1 = [i[1] for i in alt_sim_1]
+    sim_std_err_2 = [i[1] for i in alt_sim_2]
 
     cm1 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau1, fee)
     cm2 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau2, fee)
@@ -110,10 +107,10 @@ if __name__ == '__main__':
     plt.plot(ror_primes, current_manager_values2, color ='g',label=r'current manager, $P_\tau=180$')
     plt.xlabel(r'$r^\prime$')
     plt.ylabel('Expected value')
-    plt.errorbar(ror_primes, sim_values, yerr=sim_std_err,
-                 label=r'alternative manager, approach 2, $\delta=%f$' % round(delta_t, 2))
-    plt.plot(ror_primes, current_manager_values1, color='r', label=r'current manager, $P_\tau=120$')
-    plt.plot(ror_primes, current_manager_values2, color='g', label=r'current manager, $P_\tau=180$')
+    plt.errorbar(ror_primes, alt_sim_values1, yerr=sim_std_err_1,
+                 label=r'alternative manager, approach 2, $\delta t=%1.2f$' %delta_t1)
+    plt.errorbar(ror_primes, alt_sim_values2, yerr=sim_std_err_2,
+                 label=r'alternative manager, approach 2, $\delta t=%1.2f$' %delta_t2)
 
     plt.legend()
     plt.show()
