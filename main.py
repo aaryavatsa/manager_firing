@@ -39,7 +39,7 @@ def calculate_fees(sigma: float, t_h: int, ror: float, p_naught: float, p_tau: f
 
 
 def numerical_simulation(num_simulations: int, sigma: float, delta_t: float,
-                         ror: float, p_naught: float, fee: float, t_h: float) -> float:
+                         ror: float, p_naught: float, fee: float, t_h: float) -> tuple[float, float]:
     fees = []
     terminal_values = []
     num_crystallization_periods = int(t_h / delta_t)
@@ -59,15 +59,17 @@ def numerical_simulation(num_simulations: int, sigma: float, delta_t: float,
         fees.append(path_fee)
         terminal_values.append(curr_p)
 
-    average_fee = sum(fees) / len(fees)
-    avg_terminal_value = sum(terminal_values) / len(terminal_values)
-    avg_expected_value = avg_terminal_value - average_fee
-    return avg_expected_value
+    expected_values = [terminal_values[i] - fees[i] for i in range(num_simulations)]
+    avg_expected_value = np.average(expected_values)
+    std_error = int(np.std(expected_values))
+
+    # print(f'avg value: {avg_expected_value}, std_err: {std_error}')
+    return avg_expected_value, std_error
 
 
 if __name__ == '__main__':
     sigma = .200
-    t_h = 5
+    t_h = 1
     r = 0.05
     p_naught = 100
     fee = .2
@@ -76,19 +78,28 @@ if __name__ == '__main__':
     p_tau2 = 180
     delta_t1 = .25
     delta_t2 = 1.0
-    num_simulations = 100000
+    num_simulations = 1000
     ror_primes = np.linspace(start=r, stop=0.10, num=20)  # a range of r'
 
     alt_values = [calculate_expected_value(sigma, t_h, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    alt_sim_values1 = [numerical_simulation(num_simulations, sigma, delta_t1, ror, p_naught, fee, t_h) for ror in ror_primes]
-    alt_sim_values2 = [numerical_simulation(num_simulations, sigma, delta_t2, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_1 = [numerical_simulation(num_simulations, sigma, delta_t1, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_2 = [numerical_simulation(num_simulations, sigma, delta_t2, ror, p_naught, fee, t_h) for ror in ror_primes]
+
+    alt_sim_values1 = [i[0] for i in alt_sim_1]
+    alt_sim_values2 = [i[0] for i in alt_sim_2]
+    sim_std_err_1 = [i[1] for i in alt_sim_1]
+    sim_std_err_2 = [i[1] for i in alt_sim_2]
+
     cm1 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau1, fee)
     cm2 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau2, fee)
-#    print(cm2-cm1)
+    #    print(cm2-cm1)
     current_manager_values1 = [cm1 for ror in ror_primes]
     current_manager_values2 = [cm2 for ror in ror_primes]
 
-    plt.title(r'Comparison for $T_H=%i$' %t_h + ', $\sigma=%1.1f$' %sigma)
+    plt.xlabel(r'$r^\prime$')
+    plt.ylabel('Expected value')
+    plt.title(r'Comparison for $T_H=%i$' % t_h + ', $\sigma=%1.1f$' % sigma)
+
     plt.plot(ror_primes, alt_values, label='alternative manager, approach 1')
     plt.plot(ror_primes, alt_sim_values1, label=r'alternative manager, Approach 2, $\delta t=%1.2f$' %delta_t1)
     plt.plot(ror_primes, alt_sim_values2, label=r'alternative manager, Approach 2, $\delta t=%1.2f$' %delta_t2)
@@ -96,5 +107,10 @@ if __name__ == '__main__':
     plt.plot(ror_primes, current_manager_values2, color ='g',label=r'current manager, $P_\tau=180$')
     plt.xlabel(r'$r^\prime$')
     plt.ylabel('Expected value')
+    plt.errorbar(ror_primes, alt_sim_values1, yerr=sim_std_err_1,
+                 label=r'alternative manager, approach 2, $\delta t=%1.2f$' %delta_t1)
+    plt.errorbar(ror_primes, alt_sim_values2, yerr=sim_std_err_2,
+                 label=r'alternative manager, approach 2, $\delta t=%1.2f$' %delta_t2)
+
     plt.legend()
     plt.show()
