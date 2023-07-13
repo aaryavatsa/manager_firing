@@ -1,13 +1,18 @@
 """
-This file implements Formula 6 (Expected value of our holdings at end of our investment horizon)
-and compares different choices of parameters
-    - sigma: idiosyncratic risk (currently held at 20%)
-    - t_h: expected lifetime of investment (currently held at 5 years)
-    - ror: current manager rate of return (currently held at 6%)
-    - r_prime: alternative manager rate of return
-    - p_naught: current fund's value at time t=0
-    - p_tau: value of the high water NAV
-    - f: fee payment (currently held at 20%)
+This file performs the following tasks:
+
+1. Initialize all necessary variables for the simulation.
+
+2. Perform simulations.
+
+3. Visualize results.
+
+Copyright and Usage Information
+===============================
+
+This file is Copyright (c) 2023 Aarya Vatsa and Niall Whelan
+
+Under the MIT License
 """
 
 import numpy as np
