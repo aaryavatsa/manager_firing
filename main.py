@@ -70,15 +70,18 @@ if __name__ == '__main__':
     t_h = 5
     r = 0.05
     p_naught = 100
-    fee = 1 ** 10 ** 9
+    fee = .2
 
     p_tau1 = 120
     p_tau2 = 180
-    delta_t = 5
+    delta_t1 = .25
+    delta_t2 = 1.0
+    num_simulations = 100000
     ror_primes = np.linspace(start=r, stop=0.10, num=20)  # a range of r'
 
     alt_values = [calculate_expected_value(sigma, t_h, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    alt_sim_values = [numerical_simulation(5000, sigma, delta_t, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_values1 = [numerical_simulation(num_simulations, sigma, delta_t1, ror, p_naught, fee, t_h) for ror in ror_primes]
+    alt_sim_values2 = [numerical_simulation(num_simulations, sigma, delta_t2, ror, p_naught, fee, t_h) for ror in ror_primes]
     cm1 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau1, fee)
     cm2 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau2, fee)
 #    print(cm2-cm1)
@@ -87,7 +90,8 @@ if __name__ == '__main__':
 
     plt.title(r'Comparison for $T_H=%i$' %t_h + ', $\sigma=%1.1f$' %sigma)
     plt.plot(ror_primes, alt_values, label='alternative manager, approach 1')
-    plt.plot(ror_primes, alt_sim_values, label='alternative manager, approach 2, $\delta=5$')
+    plt.plot(ror_primes, alt_sim_values1, label=r'alternative manager, Approach 2, $\delta t=%1.2f$' %delta_t1)
+    plt.plot(ror_primes, alt_sim_values2, label=r'alternative manager, Approach 2, $\delta t=%1.2f$' %delta_t2)
     plt.plot(ror_primes, current_manager_values1, color ='r',label=r'current manager, $P_\tau=120$')
     plt.plot(ror_primes, current_manager_values2, color ='g',label=r'current manager, $P_\tau=180$')
     plt.xlabel(r'$r^\prime$')
