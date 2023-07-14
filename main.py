@@ -55,7 +55,7 @@ def calculate_fees(vol: float, t_h: int, ror: float, p_naught: float, p_tau: flo
     """
     N = norm.cdf  # define a normal distribution
 
-    # Formula (5) from Section 4.1
+    # Formula (5)
     d_pos_numerator = np.log(p_naught / p_tau) + t_h * (ror + vol ** 2 / 2)
     d_pos = d_pos_numerator / (vol * np.sqrt(t_h))
 
@@ -106,49 +106,44 @@ def simulate_expected_value(num_simulations: int, vol: float, t_h: float, delta_
 
 
 if __name__ == '__main__':
-    sigma = .200
-    t_h = 1
-    r = 0.05
+    # declare variables
+    volatility = 0.20
+    time_horizon = 5
+    rate_of_return = 0.05
     p_naught = 100
-    fee = .2
+    fee = 0.20
 
     p_tau1 = 120
     p_tau2 = 180
-    delta_t1 = .25
+    delta_t1 = 0.25
     delta_t2 = 1.0
-    num_simulations = 1000
-    ror_primes = np.linspace(start=r, stop=0.10, num=20)  # a range of r'
+    num_simulations = 10000  # number of simulations for Approach 2
+    ror_primes = np.linspace(start=rate_of_return, stop=0.10, num=20)  # a range of r' for simulation
 
-    alt_values = [calculate_expected_value(sigma, t_h, ror, p_naught, p_naught, fee) for ror in ror_primes]
-    alt_sim_1 = [simulate_expected_value(num_simulations, sigma, t_h, delta_t1, ror, p_naught, fee) for ror in ror_primes]
-    alt_sim_2 = [simulate_expected_value(num_simulations, sigma, t_h, delta_t2, ror, p_naught, fee) for ror in ror_primes]
+    # alternative manager expected value with both approaches
+    alt_manager_values = [calculate_expected_value(volatility, time_horizon, ror, p_naught, p_naught, fee)
+                          for ror in ror_primes]
+    alt_manager_sim_1 = [simulate_expected_value(num_simulations, volatility, time_horizon, delta_t1,
+                                                 ror, p_naught, fee) for ror in ror_primes]
+    alt_manager_sim_2 = [simulate_expected_value(num_simulations, volatility, time_horizon, delta_t2,
+                                                 ror, p_naught, fee) for ror in ror_primes]
 
-    alt_sim_values1 = [i[0] for i in alt_sim_1]
-    alt_sim_values2 = [i[0] for i in alt_sim_2]
-    sim_std_err_1 = [i[1] for i in alt_sim_1]
-    sim_std_err_2 = [i[1] for i in alt_sim_2]
+    # current manager expected value with approach 1
+    curr_manager_val_1 = calculate_expected_value(volatility, time_horizon, rate_of_return, p_naught, p_tau1, fee)
+    curr_manager_val_2 = calculate_expected_value(volatility, time_horizon, rate_of_return, p_naught, p_tau2, fee)
 
-    cm1 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau1, fee)
-    cm2 = calculate_expected_value(sigma, t_h, r, p_naught, p_tau2, fee)
-    #    print(cm2-cm1)
-    current_manager_values1 = [cm1 for ror in ror_primes]
-    current_manager_values2 = [cm2 for ror in ror_primes]
-
+    # labels
     plt.xlabel(r'$r^\prime$')
     plt.ylabel('Expected value')
-    plt.title(r'Comparison for $T_H=%i$' % t_h + ', $\sigma=%1.1f$' % sigma)
+    plt.title(r'Comparison for $T_H=%i$' % time_horizon + ', $\sigma=%1.1f$' % volatility)
 
-    plt.plot(ror_primes, alt_values, label='alternative manager, approach 1')
-    plt.plot(ror_primes, alt_sim_values1, label=r'alternative manager, Approach 2, $\delta t=%1.2f$' %delta_t1)
-    plt.plot(ror_primes, alt_sim_values2, label=r'alternative manager, Approach 2, $\delta t=%1.2f$' %delta_t2)
-    plt.plot(ror_primes, current_manager_values1, color ='r',label=r'current manager, $P_\tau=120$')
-    plt.plot(ror_primes, current_manager_values2, color ='g',label=r'current manager, $P_\tau=180$')
-    plt.xlabel(r'$r^\prime$')
-    plt.ylabel('Expected value')
-    plt.errorbar(ror_primes, alt_sim_values1, yerr=sim_std_err_1,
-                 label=r'alternative manager, approach 2, $\delta t=%1.2f$' %delta_t1)
-    plt.errorbar(ror_primes, alt_sim_values2, yerr=sim_std_err_2,
-                 label=r'alternative manager, approach 2, $\delta t=%1.2f$' %delta_t2)
+    # plotting results
+    plt.plot(ror_primes, alt_manager_values, label='alternative manager, approach 1')
+    plt.plot(ror_primes, alt_manager_sim_1, label=r'alternative manager, approach 2, $\delta t=%1.2f$' % delta_t1)
+    plt.plot(ror_primes, alt_manager_sim_2, label=r'alternative manager, approach 2, $\delta t=%1.2f$' % delta_t2)
+    plt.axhline(curr_manager_val_1, color='r', linestyle='-', label=r'current manager, $P_{\tau}=%d$' % p_tau1)
+    plt.axhline(curr_manager_val_2, color='r', linestyle='-', label=r'current manager, $P_{\tau}=%d$' % p_tau2)
 
+    # visualizing graph
     plt.legend()
     plt.show()
