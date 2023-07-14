@@ -1,6 +1,6 @@
 # manager_firing
 
-The numerical approaches discussed in Sections 6.1 and 6.2 of 'Firing an External Manager' were modelled and visualized with Python. 
+The numerical approaches discussed in Sections 6.1 and 6.2 of 'Firing an External Manager' authored by Bhaduri, R., Whelan, N., Vatsa, A., and Han, J. 2023 were modelled and visualized with Python. 
 This code, along with relevant documentation, can be accessed through this repository. Readers can examine 
 the implementation details, gain insights into the computational workflow, and experiment with the code to replicate the 
 results of the research.
